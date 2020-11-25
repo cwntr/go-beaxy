@@ -28,7 +28,7 @@ func TestClient_OrderFlow(t *testing.T) {
 		SecurityID:  SymbolXSNBTC,
 		Type:        "limit",
 		Price:       "0.00000720",
-		Side:        Sell.s(),
+		Side:        Sell.S(),
 		Quantity:    "21",
 		Destination: "MAXI",
 		TimeInForce: "gtc",

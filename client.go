@@ -333,7 +333,7 @@ func (c *Client) PlaceOrder(o PostOrder) (*Order, int, error) {
 		return nil, 0, err
 	}
 	if o.TimeInForce == "" {
-		o.TimeInForce = GTC.s()
+		o.TimeInForce = GTC.S()
 	}
 	request, err := json.Marshal(o)
 	if err != nil {

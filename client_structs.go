@@ -120,15 +120,15 @@ type OrderStatus string
 type OrderSide string
 type OrderTimeInForce string
 
-func (t OrderStatus) s() string {
+func (t OrderStatus) S() string {
 	s := t
 	return string(s)
 }
-func (t OrderSide) s() string {
+func (t OrderSide) S() string {
 	s := t
 	return string(s)
 }
-func (t OrderTimeInForce) s() string {
+func (t OrderTimeInForce) S() string {
 	s := t
 	return string(s)
 }
