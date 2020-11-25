@@ -96,8 +96,8 @@ type Order struct {
 	CumulativeQuantity string `json:"cumulative_quantity"`
 	RemainingQuantity  string `json:"remaining_quantity"`
 	AveragePrice       string `json:"average_price"`
-	ReceiptTime        string `json:"receipt_time"`
-	CloseTime          string `json:"close_time"`
+	ReceiptTime        int64  `json:"receipt_time"`
+	CloseTime          int64  `json:"close_time"`
 }
 
 type PostOrder struct {
