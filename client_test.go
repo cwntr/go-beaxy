@@ -2,6 +2,7 @@ package go_beaxy
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 )
@@ -27,8 +28,8 @@ func TestClient_OrderFlow(t *testing.T) {
 	order := PostOrder{
 		SecurityID:  SymbolXSNBTC,
 		Type:        "limit",
-		Price:       "0.00000720",
-		Side:        Sell.S(),
+		Price:       "0.00000500",
+		Side:        Buy.S(),
 		Quantity:    "21",
 		Destination: "MAXI",
 		TimeInForce: "gtc",
@@ -76,5 +77,48 @@ func TestClient_Accounts(t *testing.T) {
 		if a.CurrencyID == "BTC" {
 			fmt.Printf("BTC available: %+v", a.AvailableForTrading)
 		}
+	}
+}
+
+func TestClient_GetOrderHistory(t *testing.T) {
+	c := NewClient(TestAPIKey, getTestKeyContent())
+	if c == nil {
+		t.Fail()
+		return
+	}
+
+	c.EnableDebugMode()
+	orders, _, err := c.GetOrderHistory(10, time.Now())
+	if err != nil {
+		return
+	}
+
+	oo := *orders
+	fmt.Printf("GetOrderHistory: %+v", oo)
+	for _, o := range oo {
+		_ = o
+		fmt.Printf("GetOrderHistory detais: %+v", o)
+	}
+}
+
+func TestClient_GetOrder(t *testing.T) {
+	testOrderID := strings.ToUpper("7D7B8F89-2DBE-4C7D-AC43-476BC3C47B2B")
+	c := NewClient(TestAPIKey, getTestKeyContent())
+	if c == nil {
+		t.Fail()
+		return
+	}
+
+	c.EnableDebugMode()
+	orders, _, err := c.GetOrder(testOrderID)
+	if err != nil {
+		return
+	}
+
+	oo := *orders
+	fmt.Printf("orders: %+v", oo)
+	for _, o := range oo {
+		_ = o
+		fmt.Printf("order detais: %+v", o)
 	}
 }

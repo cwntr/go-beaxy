@@ -11,9 +11,9 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"math/big"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
 	"time"
 
@@ -87,12 +87,18 @@ func NewClient(apiKey string, keyContent string) *Client {
 		DisableCompression: true,
 	}
 	c.HTTPClient = &http.Client{Transport: tr}
-	//c.EnableDebugMode()
 	err = c.Auth()
 	if err != nil {
 		c.log.Errorf("[auth] error while authenticating: %v ", err)
 		return nil
 	}
+	/*
+		err = c.WSConnect()
+		if err != nil {
+			c.log.Errorf("[auth] error while connecting to websocket: %v ", err)
+			return nil
+		}
+	*/
 	return c
 }
 
@@ -304,19 +310,12 @@ func (c *Client) GetAccounts() (*GetAccountsResponse, int, error) {
 	}
 	if c.isDebugMode {
 		c.log.Debugf("[get-accounts] response status: %d", resp.StatusCode)
-	}
-
-	/*
-		if c.isDebugMode {
-		defer resp.Body.Close()
-		bodyBytes, err := ioutil.ReadAll(resp.Body)
+		dump, err := httputil.DumpResponse(resp, true)
 		if err != nil {
-			return nil, err
+			c.log.Errorf("[get-accounts] err while dumping response, err: %v", err)
 		}
-
-		c.log.Debugf("[get-accounts] response body: %s", string(bodyBytes))
-		}
-	*/
+		c.log.Debugf("[get-accounts] response body: %s", string(dump))
+	}
 	var resData GetAccountsResponse
 	err = getJson(resp, &resData)
 	return &resData, resp.StatusCode, err
@@ -390,19 +389,12 @@ func (c *Client) PlaceOrder(o PostOrder) (*Order, int, error) {
 	}
 	if c.isDebugMode {
 		c.log.Debugf("[post-orders] response status: %d", resp.StatusCode)
-	}
-
-	/*
-		if c.isDebugMode {
-			defer resp.Body.Close()
-			bodyBytes, err := ioutil.ReadAll(resp.Body)
-			if err != nil {
-				return nil, resp.StatusCode, err
-			}
-
-			c.log.Debugf("[post-orders] response body: %s", string(bodyBytes))
+		dump, err := httputil.DumpResponse(resp, true)
+		if err != nil {
+			c.log.Errorf("[post-orders] err while dumping response, err: %v", err)
 		}
-	*/
+		c.log.Debugf("[post-orders] response body: %s", string(dump))
+	}
 
 	var resData Order
 	err = getJson(resp, &resData)
@@ -472,19 +464,15 @@ func (c *Client) DeleteOrder(orderId string) error {
 	}
 	if c.isDebugMode {
 		c.log.Debugf("[delete-order] response status: %d", resp.StatusCode)
+		dump, err := httputil.DumpResponse(resp, true)
+		if err != nil {
+			c.log.Errorf("[delete-order] err while dumping response, err: %v", err)
+		}
+		c.log.Debugf("[delete-order] response body: %s", string(dump))
 	}
 
 	if resp.StatusCode > 202 {
 		return fmt.Errorf("[delete-order] status code: %d", resp.StatusCode)
-	}
-
-	if c.isDebugMode {
-		defer resp.Body.Close()
-		bodyBytes, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			return err
-		}
-		c.log.Debugf("[delete-order] response body: %s", string(bodyBytes))
 	}
 	return nil
 }
@@ -546,19 +534,12 @@ func (c *Client) GetActiveOrders() (*GetOrdersResponse, int, error) {
 	}
 	if c.isDebugMode {
 		c.log.Debugf("[get-orders] response status: %d", resp.StatusCode)
-	}
-
-	/*
-		if c.isDebugMode {
-		defer resp.Body.Close()
-		bodyBytes, err := ioutil.ReadAll(resp.Body)
+		dump, err := httputil.DumpResponse(resp, true)
 		if err != nil {
-			return nil, err
+			c.log.Errorf("[get-orders] err while dumping response, err: %v", err)
 		}
-
-		c.log.Debugf("[get-accounts] response body: %s", string(bodyBytes))
-		}
-	*/
+		c.log.Debugf("[get-orders] response body: %s", string(dump))
+	}
 	var resData GetOrdersResponse
 	err = getJson(resp, &resData)
 	return &resData, resp.StatusCode, nil
@@ -625,19 +606,12 @@ func (c *Client) GetOrder(orderId string) (*GetOrdersResponse, int, error) {
 	}
 	if c.isDebugMode {
 		c.log.Debugf("[get-order] response status: %d", resp.StatusCode)
-	}
-
-	/*
-		if c.isDebugMode {
-		defer resp.Body.Close()
-		bodyBytes, err := ioutil.ReadAll(resp.Body)
+		dump, err := httputil.DumpResponse(resp, true)
 		if err != nil {
-			return nil, err
+			c.log.Errorf("[get-order] err while dumping response, err: %v", err)
 		}
-
-		c.log.Debugf("[get-accounts] response body: %s", string(bodyBytes))
-		}
-	*/
+		c.log.Debugf("[get-order] response body: %s", string(dump))
+	}
 	var resData GetOrdersResponse
 	err = getJson(resp, &resData)
 	return &resData, resp.StatusCode, nil
@@ -655,8 +629,9 @@ func (c *Client) GetOrderHistory(count int, startTime time.Time) (*GetOrdersResp
 
 	u := url.Values{}
 	u.Add("count", fmt.Sprintf("%d", 0))
-	u.Add("startTime", fmt.Sprintf("%d", toTimestampMilliseconds(time.Now().AddDate(0, 0, -7))))
-	req, err := http.NewRequest(http.MethodGet, c.GetTargetURL(EndpointOrdersHistory, u), nil)
+	//u.Add("startTime", fmt.Sprintf("%d", toTimestampMilliseconds(time.Now().AddDate(0, 0, -7))))
+	u.Add("startTime", fmt.Sprintf("%d", 0))
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s%s?%s=%d", c.URL, EndpointOrdersHistory, "startTime", 0), nil)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -677,10 +652,11 @@ func (c *Client) GetOrderHistory(count int, startTime time.Time) (*GetOrdersResp
 	// Build payload and request signature
 	mac := hmac.New(sha512.New384, secretKey.Bytes())
 	nonce := fmt.Sprintf("%d", getNonce())
-	payload := fmt.Sprintf("%s/api/v1/%s?%s%s=%s&%s=%s",
+	payload := fmt.Sprintf("%s/api/v1/%s?%s=%d%s=%s&%s=%s",
 		http.MethodGet,
 		EndpointOrdersHistory,
-		u.Encode(),
+		"startTime",
+		0,
 		ReqHeaderNonce,
 		nonce,
 		ReqHeaderSessionId,
@@ -708,19 +684,66 @@ func (c *Client) GetOrderHistory(count int, startTime time.Time) (*GetOrdersResp
 	if c.isDebugMode {
 		c.log.Debugf("[get-order-history] request-url: %s", req.URL.String())
 		c.log.Debugf("[get-order-history] response status: %d", resp.StatusCode)
-	}
-
-	if c.isDebugMode {
-		defer resp.Body.Close()
-		bodyBytes, err := ioutil.ReadAll(resp.Body)
+		dump, err := httputil.DumpResponse(resp, true)
 		if err != nil {
-			return nil, resp.StatusCode, err
+			c.log.Errorf("[get-order-history] err while dumping response, err: %v", err)
 		}
-
-		c.log.Debugf("[get-order-history] response body: %s", string(bodyBytes))
+		c.log.Debugf("[get-order-history] response body: %s", string(dump))
 	}
 
 	var resData GetOrdersResponse
 	err = getJson(resp, &resData)
 	return &resData, resp.StatusCode, nil
 }
+
+/*
+func (c *Client) WSConnect() error {
+	dhMod, err := base64ToBigInt(c.DhModulus)
+	if err != nil {
+		return err
+	}
+	dhKey, err := base64ToBigInt(c.DhKey)
+	if err != nil {
+		return err
+	}
+	if c.isDebugMode {
+		c.log.Debugf("[ws-connect] stored dh key: %s", c.DhKey)
+		c.log.Debugf("[ws-connect] dh key: %d", dhKey)
+	}
+
+	// Calculate session secret key
+	dhNumber := new(big.Int)
+	dhNumber.SetBytes(c.DhNumberBytes)
+	secretKey := mathutil.ModPowBigInt(dhKey, dhNumber, dhMod)
+
+	// Build payload and request signature
+	mac := hmac.New(sha512.New384, secretKey.Bytes())
+	nonce :=  getNonce()
+	payload := fmt.Sprintf(`CONNECT
+%s: %d
+%s: %s
+`,
+		ReqHeaderNonce,
+		nonce,
+		ReqHeaderSessionId,
+		c.SessionID,
+	)
+	mac.Write([]byte(payload))
+	hmacSum := mac.Sum(nil)
+	rSignature := base64.StdEncoding.EncodeToString(hmacSum)
+
+	stomp.
+	conn, err := stomp.Dial("tcp", "tradingapi.beaxy.com/websocket/v1:wss",
+		stomp.ConnOpt.AcceptVersion(stomp.V11),
+		stomp.ConnOpt.AcceptVersion(stomp.V12),
+		stomp.ConnOpt.Header(ReqHeaderNonce, fmt.Sprintf("%d", getNonce())),
+		stomp.ConnOpt.Header(ReqHeaderSignature, rSignature),
+		stomp.ConnOpt.Header(ReqHeaderSessionId, c.SessionID))
+
+	if err != nil {
+		return err
+	}
+	c.WSConn = conn
+	return nil
+}
+*/
