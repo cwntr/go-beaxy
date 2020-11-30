@@ -131,11 +131,6 @@ func (c *Client) SetRulebook() error {
 	}
 	if c.isDebugMode {
 		c.log.Debugf("[set-rulebook] response status: %d", resp.StatusCode)
-		dump, err := httputil.DumpResponse(resp, true)
-		if err != nil {
-			c.log.Errorf("[set-rulebook] err while dumping response, err: %v", err)
-		}
-		c.log.Debugf("[set-rulebook] response body: %s", string(dump))
 	}
 	var resData Rulebook
 	err = getJson(resp, &resData)
@@ -357,11 +352,13 @@ func (c *Client) GetAccounts() (*GetAccountsResponse, int, error) {
 	}
 	if c.isDebugMode {
 		c.log.Debugf("[get-accounts] response status: %d", resp.StatusCode)
-		dump, err := httputil.DumpResponse(resp, true)
-		if err != nil {
-			c.log.Errorf("[get-accounts] err while dumping response, err: %v", err)
+		if resp.StatusCode != 200 {
+			dump, err := httputil.DumpResponse(resp, true)
+			if err != nil {
+				c.log.Errorf("[get-accounts] err while dumping response, err: %v", err)
+			}
+			c.log.Debugf("[get-accounts] response body: %s", string(dump))
 		}
-		c.log.Debugf("[get-accounts] response body: %s", string(dump))
 	}
 	var resData GetAccountsResponse
 	err = getJson(resp, &resData)
@@ -581,11 +578,13 @@ func (c *Client) GetActiveOrders() (*GetOrdersResponse, int, error) {
 	}
 	if c.isDebugMode {
 		c.log.Debugf("[get-orders] response status: %d", resp.StatusCode)
-		dump, err := httputil.DumpResponse(resp, true)
-		if err != nil {
-			c.log.Errorf("[get-orders] err while dumping response, err: %v", err)
+		if resp.StatusCode != 200 {
+			dump, err := httputil.DumpResponse(resp, true)
+			if err != nil {
+				c.log.Errorf("[get-orders] err while dumping response, err: %v", err)
+			}
+			c.log.Debugf("[get-orders] response body: %s", string(dump))
 		}
-		c.log.Debugf("[get-orders] response body: %s", string(dump))
 	}
 	var resData GetOrdersResponse
 	err = getJson(resp, &resData)
