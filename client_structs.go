@@ -1,5 +1,7 @@
 package go_beaxy
 
+import "github.com/shopspring/decimal"
+
 const (
 	New              OrderStatus = "new"
 	Rejected         OrderStatus = "rejected"
@@ -131,4 +133,25 @@ func (t OrderSide) S() string {
 func (t OrderTimeInForce) S() string {
 	s := t
 	return string(s)
+}
+
+type Rulebook []Ruleset
+
+type Ruleset struct {
+	Symbol                           string          `json:"symbol"`
+	Name                             string          `json:"name"`
+	MinimumQuantity                  decimal.Decimal `json:"minimumQuantity"`
+	MaximumQuantity                  decimal.Decimal `json:"maximumQuantity"`
+	QuantityIncrement                decimal.Decimal `json:"quantityIncrement"`
+	QuantityPrecision                int             `json:"quantityPrecision"`
+	TickSize                         decimal.Decimal `json:"tickSize"`
+	BaseCurrency                     string          `json:"baseCurrency"`
+	TermCurrency                     string          `json:"termCurrency"`
+	PricePrecision                   int             `json:"pricePrecision"`
+	BuyerTakerCommissionProgressive  decimal.Decimal `json:"buyerTakerCommissionProgressive"`
+	BuyerMakerCommissionProgressive  decimal.Decimal `json:"buyerMakerCommissionProgressive"`
+	SellerTakerCommissionProgressive decimal.Decimal `json:"sellerTakerCommissionProgressive"`
+	SellerMakerCommissionProgressive decimal.Decimal `json:"sellerMakerCommissionProgressive"`
+	Type                             string          `json:"type"`
+	SuspendedForTrading              bool            `json:"suspendedForTrading"`
 }

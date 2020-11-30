@@ -23,11 +23,14 @@ import (
 )
 
 const (
-	TradingURL = "https://tradingapi.beaxy.com/api/v1/"
+	// Public REST API
+	PublicURL       = "https://services.beaxy.com/api/v2/"
+	EndpointSymbols = "symbols"
 
-	EndpointLoginAttempt = "login/attempt"
-	EndpointLoginConfirm = "login/confirm"
-
+	//Trading REST API
+	TradingURL            = "https://tradingapi.beaxy.com/api/v1/"
+	EndpointLoginAttempt  = "login/attempt"
+	EndpointLoginConfirm  = "login/confirm"
 	EndpointAccounts      = "accounts"
 	EndpointOrders        = "orders"
 	EndpointOrdersHistory = "orders/history"
@@ -44,7 +47,8 @@ const (
 
 // Client struct holds data how to connect to Beaxy REST API
 type Client struct {
-	URL        string
+	TradingURL string
+	PublicURL  string
 	HTTPClient *http.Client
 	log        *logrus.Logger
 
@@ -64,13 +68,17 @@ type Client struct {
 	DhNumberBytes    []byte
 	DhKey            string
 	SecretKey        string
+
+	//Ruleset
+	Ruleset Rulebook
 }
 
 // NewClient will create Client object that can be used to request all possible exchange endpoints
 // Mandatory parameter: apiKey and keyContent which are given from Beaxy API Management
 func NewClient(apiKey string, keyContent string) *Client {
 	c := &Client{}
-	c.URL = TradingURL
+	c.TradingURL = TradingURL
+	c.PublicURL = PublicURL
 	c.APIKey = apiKey
 	c.log = logrus.New()
 
@@ -99,6 +107,8 @@ func NewClient(apiKey string, keyContent string) *Client {
 			return nil
 		}
 	*/
+
+	err = c.SetRulebook()
 	return c
 }
 
@@ -106,6 +116,35 @@ func NewClient(apiKey string, keyContent string) *Client {
 func (c *Client) EnableDebugMode() {
 	c.isDebugMode = true
 	c.log.Level = logrus.DebugLevel
+}
+
+// Retrieves all symbols limits and maps it into local rulebook for validation purposes
+func (c *Client) SetRulebook() error {
+	req, err := http.NewRequest("GET", c.GetPublicAPIUrl(EndpointSymbols, url.Values{}), nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Add(ReqHeaderContentType, ReqHeaderJson)
+	resp, err := c.HTTPClient.Do(req)
+	if err != nil {
+		return err
+	}
+	if c.isDebugMode {
+		c.log.Debugf("[set-rulebook] response status: %d", resp.StatusCode)
+		dump, err := httputil.DumpResponse(resp, true)
+		if err != nil {
+			c.log.Errorf("[set-rulebook] err while dumping response, err: %v", err)
+		}
+		c.log.Debugf("[set-rulebook] response body: %s", string(dump))
+	}
+	var resData Rulebook
+	err = getJson(resp, &resData)
+	if err != nil {
+		return err
+	}
+
+	c.Ruleset = resData
+	return nil
 }
 
 // Auth func will execute a 3 step flow by login, confirm and get accounts to check if auth is working
@@ -137,12 +176,20 @@ func (c *Client) Auth() error {
 	return nil
 }
 
-// GetTargetURL func will concatenate server host and the endpoint to be requested
-func (c *Client) GetTargetURL(endpoint string, queryParams url.Values) string {
+// GetTradingAPIUrl func will concatenate server host(trading) and the endpoint to be requested
+func (c *Client) GetTradingAPIUrl(endpoint string, queryParams url.Values) string {
 	if len(queryParams) == 0 {
-		return fmt.Sprintf("%s%s", c.URL, endpoint)
+		return fmt.Sprintf("%s%s", c.TradingURL, endpoint)
 	}
-	return fmt.Sprintf("%s%s?%s", c.URL, endpoint, queryParams.Encode())
+	return fmt.Sprintf("%s%s?%s", c.TradingURL, endpoint, queryParams.Encode())
+}
+
+// GetPublicAPIUrl func will concatenate server host(public) and the endpoint to be requested
+func (c *Client) GetPublicAPIUrl(endpoint string, queryParams url.Values) string {
+	if len(queryParams) == 0 {
+		return fmt.Sprintf("%s%s", c.PublicURL, endpoint)
+	}
+	return fmt.Sprintf("%s%s?%s", c.PublicURL, endpoint, queryParams.Encode())
 }
 
 // LoginAttempt func will start authentication by passing the api-key to get a session challenge and DH base + modulus
@@ -153,7 +200,7 @@ func (c *Client) LoginAttempt() (*LoginAttemptResponse, int, error) {
 		return nil, 0, err
 	}
 
-	req, err := http.NewRequest(http.MethodPost, c.GetTargetURL(EndpointLoginAttempt, url.Values{}), bytes.NewBuffer(request))
+	req, err := http.NewRequest(http.MethodPost, c.GetTradingAPIUrl(EndpointLoginAttempt, url.Values{}), bytes.NewBuffer(request))
 	if err != nil {
 		return nil, 0, err
 	}
@@ -238,7 +285,7 @@ func (c *Client) LoginConfirm() (*LoginConfirmResponse, int, error) {
 	if err != nil {
 		return nil, 0, err
 	}
-	req, err := http.NewRequest(http.MethodPost, c.GetTargetURL(EndpointLoginConfirm, url.Values{}), bytes.NewBuffer(request))
+	req, err := http.NewRequest(http.MethodPost, c.GetTradingAPIUrl(EndpointLoginConfirm, url.Values{}), bytes.NewBuffer(request))
 	if err != nil {
 		return nil, 0, err
 	}
@@ -260,7 +307,7 @@ func (c *Client) GetAccounts() (*GetAccountsResponse, int, error) {
 		return nil, 0, err
 	}
 
-	req, err := http.NewRequest("GET", c.GetTargetURL(EndpointAccounts, url.Values{}), nil)
+	req, err := http.NewRequest("GET", c.GetTradingAPIUrl(EndpointAccounts, url.Values{}), nil)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -338,7 +385,7 @@ func (c *Client) PlaceOrder(o PostOrder) (*Order, int, error) {
 	if err != nil {
 		return nil, 0, err
 	}
-	req, err := http.NewRequest("POST", c.GetTargetURL(EndpointOrders, url.Values{}), bytes.NewBuffer(request))
+	req, err := http.NewRequest("POST", c.GetTradingAPIUrl(EndpointOrders, url.Values{}), bytes.NewBuffer(request))
 	if err != nil {
 		return nil, 0, err
 	}
@@ -412,7 +459,7 @@ func (c *Client) DeleteOrder(orderId string) error {
 		return err
 	}
 
-	req, err := http.NewRequest(http.MethodDelete, c.GetTargetURL(EndpointOrders, url.Values{}), nil)
+	req, err := http.NewRequest(http.MethodDelete, c.GetTradingAPIUrl(EndpointOrders, url.Values{}), nil)
 	if err != nil {
 		return err
 	}
@@ -484,7 +531,7 @@ func (c *Client) GetActiveOrders() (*GetOrdersResponse, int, error) {
 		return nil, 0, err
 	}
 
-	req, err := http.NewRequest("GET", c.GetTargetURL(EndpointOrders, url.Values{}), nil)
+	req, err := http.NewRequest("GET", c.GetTradingAPIUrl(EndpointOrders, url.Values{}), nil)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -555,7 +602,7 @@ func (c *Client) GetOrder(orderId string) (*GetOrdersResponse, int, error) {
 		return nil, 0, err
 	}
 
-	req, err := http.NewRequest("GET", c.GetTargetURL(EndpointOrders, url.Values{}), nil)
+	req, err := http.NewRequest("GET", c.GetTradingAPIUrl(EndpointOrders, url.Values{}), nil)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -631,7 +678,7 @@ func (c *Client) GetOrderHistory(count int, startTime time.Time) (*GetOrdersResp
 	u.Add("count", fmt.Sprintf("%d", 0))
 	//u.Add("startTime", fmt.Sprintf("%d", toTimestampMilliseconds(time.Now().AddDate(0, 0, -7))))
 	u.Add("startTime", fmt.Sprintf("%d", 0))
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s%s?%s=%d", c.URL, EndpointOrdersHistory, "startTime", 0), nil)
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s%s?%s=%d", c.TradingURL, EndpointOrdersHistory, "startTime", 0), nil)
 	if err != nil {
 		return nil, 0, err
 	}
