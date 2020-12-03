@@ -673,11 +673,7 @@ func (c *Client) GetOrderHistory(count int, startTime time.Time) (*GetOrdersResp
 		return nil, 0, err
 	}
 
-	u := url.Values{}
-	u.Add("count", fmt.Sprintf("%d", 0))
-	//u.Add("startTime", fmt.Sprintf("%d", toTimestampMilliseconds(time.Now().AddDate(0, 0, -7))))
-	u.Add("startTime", fmt.Sprintf("%d", 0))
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s%s?%s=%d", c.TradingURL, EndpointOrdersHistory, "startTime", 0), nil)
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s%s?%s=%d&%s=%d", c.TradingURL, EndpointOrdersHistory, "count", count, "startTime", toTimestampMilliseconds(startTime)), nil)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -698,11 +694,13 @@ func (c *Client) GetOrderHistory(count int, startTime time.Time) (*GetOrdersResp
 	// Build payload and request signature
 	mac := hmac.New(sha512.New384, secretKey.Bytes())
 	nonce := fmt.Sprintf("%d", getNonce())
-	payload := fmt.Sprintf("%s/api/v1/%s?%s=%d%s=%s&%s=%s",
+	payload := fmt.Sprintf("%s/api/v1/%s%s=%d&%s=%d%s=%s&%s=%s",
 		http.MethodGet,
 		EndpointOrdersHistory,
-		"startTime",
-		0,
+		"count",
+		count,
+		"starttime", //must be lowercase
+		toTimestampMilliseconds(startTime),
 		ReqHeaderNonce,
 		nonce,
 		ReqHeaderSessionId,
@@ -741,55 +739,3 @@ func (c *Client) GetOrderHistory(count int, startTime time.Time) (*GetOrdersResp
 	err = getJson(resp, &resData)
 	return &resData, resp.StatusCode, nil
 }
-
-/*
-func (c *Client) WSConnect() error {
-	dhMod, err := base64ToBigInt(c.DhModulus)
-	if err != nil {
-		return err
-	}
-	dhKey, err := base64ToBigInt(c.DhKey)
-	if err != nil {
-		return err
-	}
-	if c.isDebugMode {
-		c.log.Debugf("[ws-connect] stored dh key: %s", c.DhKey)
-		c.log.Debugf("[ws-connect] dh key: %d", dhKey)
-	}
-
-	// Calculate session secret key
-	dhNumber := new(big.Int)
-	dhNumber.SetBytes(c.DhNumberBytes)
-	secretKey := mathutil.ModPowBigInt(dhKey, dhNumber, dhMod)
-
-	// Build payload and request signature
-	mac := hmac.New(sha512.New384, secretKey.Bytes())
-	nonce :=  getNonce()
-	payload := fmt.Sprintf(`CONNECT
-%s: %d
-%s: %s
-`,
-		ReqHeaderNonce,
-		nonce,
-		ReqHeaderSessionId,
-		c.SessionID,
-	)
-	mac.Write([]byte(payload))
-	hmacSum := mac.Sum(nil)
-	rSignature := base64.StdEncoding.EncodeToString(hmacSum)
-
-	stomp.
-	conn, err := stomp.Dial("tcp", "tradingapi.beaxy.com/websocket/v1:wss",
-		stomp.ConnOpt.AcceptVersion(stomp.V11),
-		stomp.ConnOpt.AcceptVersion(stomp.V12),
-		stomp.ConnOpt.Header(ReqHeaderNonce, fmt.Sprintf("%d", getNonce())),
-		stomp.ConnOpt.Header(ReqHeaderSignature, rSignature),
-		stomp.ConnOpt.Header(ReqHeaderSessionId, c.SessionID))
-
-	if err != nil {
-		return err
-	}
-	c.WSConn = conn
-	return nil
-}
-*/

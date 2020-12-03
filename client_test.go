@@ -88,7 +88,9 @@ func TestClient_GetOrderHistory(t *testing.T) {
 	}
 
 	c.EnableDebugMode()
-	orders, _, err := c.GetOrderHistory(10, time.Now())
+
+	//get first 10 orders from last week
+	orders, _, err := c.GetOrderHistory(10, time.Now().AddDate(0, 0, -7))
 	if err != nil {
 		return
 	}
@@ -102,7 +104,7 @@ func TestClient_GetOrderHistory(t *testing.T) {
 }
 
 func TestClient_GetOrder(t *testing.T) {
-	testOrderID := strings.ToUpper("7D7B8F89-2DBE-4C7D-AC43-476BC3C47B2B")
+	testOrderID := strings.ToUpper("A32B8F89-2DB3-4C1D-AC43-476BDCC47B3B")
 	c := NewClient(TestAPIKey, getTestKeyContent())
 	if c == nil {
 		t.Fail()
