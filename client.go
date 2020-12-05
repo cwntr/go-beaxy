@@ -515,7 +515,7 @@ func (c *Client) DeleteOrder(orderId string) error {
 		c.log.Debugf("[delete-order] response body: %s", string(dump))
 	}
 
-	if resp.StatusCode > 202 {
+	if resp.StatusCode > 202 && resp.StatusCode != 404 {
 		return fmt.Errorf("[delete-order] status code: %d", resp.StatusCode)
 	}
 	return nil
