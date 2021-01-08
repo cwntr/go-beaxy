@@ -155,3 +155,20 @@ type Ruleset struct {
 	Type                             string          `json:"type"`
 	SuspendedForTrading              bool            `json:"suspendedForTrading"`
 }
+
+type Orderbook struct {
+	Type           string           `json:"type"`
+	Security       string           `json:"security"`
+	Timestamp      int64            `json:"timestamp"`
+	SequenceNumber int              `json:"sequenceNumber"`
+	Entries        []OrderbookEntry `json:"entries"`
+}
+
+type OrderbookEntry struct {
+	Action         string      `json:"action"`
+	Side           string      `json:"side"`
+	Level          int         `json:"level"`
+	NumberOfOrders interface{} `json:"numberOfOrders"`
+	Quantity       float64     `json:"quantity"`
+	Price          float64     `json:"price"`
+}

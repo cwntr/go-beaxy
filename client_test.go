@@ -16,6 +16,18 @@ func getTestKeyContent() string {
 `
 }
 
+func TestClient_Orderbook(t *testing.T) {
+	c := NewClient(TestAPIKey, getTestKeyContent())
+	orderbook, err := c.GetOrderbook("XSNBTC", 5)
+	fmt.Printf("orderbook: %v\n", orderbook)
+	fmt.Printf("err: %v\n", err)
+
+	for _, o := range orderbook.Entries{
+		fmt.Printf("side: %s price: %.8f \n", o.Side, o.Price)
+	}
+}
+
+
 func TestClient_OrderFlow(t *testing.T) {
 	c := NewClient(TestAPIKey, getTestKeyContent())
 	if c == nil {
@@ -75,7 +87,7 @@ func TestClient_Accounts(t *testing.T) {
 	}
 	for _, a := range *accounts {
 		if a.CurrencyID == "BTC" {
-			fmt.Printf("BTC available: %+v", a.AvailableForTrading)
+			fmt.Printf("BTC available: %+v", a)
 		}
 	}
 }
@@ -87,19 +99,24 @@ func TestClient_GetOrderHistory(t *testing.T) {
 		return
 	}
 
-	c.EnableDebugMode()
-
+	//c.EnableDebugMode()
+	now := time.Now()
+	before := now.Add(time.Duration(-20) * time.Minute)
 	//get first 10 orders from last week
-	orders, _, err := c.GetOrderHistory(10, time.Now().AddDate(0, 0, -7))
+	orders, sc, err := c.GetOrderHistory(150000000, before)
 	if err != nil {
+		fmt.Printf("err: (sc: %d) %+v\n", sc, err)
 		return
 	}
 
+	fmt.Printf("rsp: (sc: %d)\n ", sc)
 	oo := *orders
-	fmt.Printf("GetOrderHistory: %+v", oo)
+	fmt.Printf("GetOrderHistory:%d\n", len(oo))
 	for _, o := range oo {
 		_ = o
-		fmt.Printf("GetOrderHistory detais: %+v", o)
+		if o.ID == strings.ToUpper("7844db4a-be43-4163-a05a-8f97de55fe90") {
+			fmt.Printf("GetOrderHistory detais: %+v", o)
+		}
 	}
 }
 
@@ -115,6 +132,29 @@ func TestClient_GetOrder(t *testing.T) {
 	orders, _, err := c.GetOrder(testOrderID)
 	if err != nil {
 		return
+	}
+
+	oo := *orders
+	fmt.Printf("orders: %+v", oo)
+	for _, o := range oo {
+		_ = o
+		fmt.Printf("order detais: %+v", o)
+	}
+}
+
+func TestClient_GetRecentOrderHistory(t *testing.T) {
+	c := NewClient(TestAPIKey, getTestKeyContent())
+	if c == nil {
+		t.Fail()
+		return
+	}
+
+	c.EnableDebugMode()
+	now := time.Now()
+	before := now.Add(time.Duration(-24) * time.Hour)
+	orders, sc, err := c.GetOrderHistory(2000, before)
+	if err != nil || sc > 200 {
+		t.Fail()
 	}
 
 	oo := *orders

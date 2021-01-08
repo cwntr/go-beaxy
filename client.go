@@ -739,3 +739,27 @@ func (c *Client) GetOrderHistory(count int, startTime time.Time) (*GetOrdersResp
 	err = getJson(resp, &resData)
 	return &resData, resp.StatusCode, nil
 }
+
+// GetOrderbook returns the most recent orderbook snapshot of a given symbol
+func (c *Client) GetOrderbook(symbol string, depth int) (Orderbook, error) {
+	if depth != 5 && depth != 10 && depth != 15 {
+		//default
+		depth = 5
+	}
+	u, err := url.Parse(fmt.Sprintf("%s/symbols/%s/book?depth=%d",PublicURL, symbol, depth))
+	if err != nil {
+		return Orderbook{}, err
+	}
+	var t Orderbook
+	err = c.getJson(u.String(), &t)
+	return t, nil
+}
+
+func (c *Client) getJson(url string, target interface{}) error {
+	r, err := c.HTTPClient.Get(url)
+	if err != nil {
+		return err
+	}
+	defer r.Body.Close()
+	return json.NewDecoder(r.Body).Decode(target)
+}
