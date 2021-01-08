@@ -16,16 +16,7 @@ func getTestKeyContent() string {
 `
 }
 
-func TestClient_Orderbook(t *testing.T) {
-	c := NewClient(TestAPIKey, getTestKeyContent())
-	orderbook, err := c.GetOrderbook("XSNBTC", 5)
-	fmt.Printf("orderbook: %v\n", orderbook)
-	fmt.Printf("err: %v\n", err)
 
-	for _, o := range orderbook.Entries{
-		fmt.Printf("side: %s price: %.8f \n", o.Side, o.Price)
-	}
-}
 
 
 func TestClient_OrderFlow(t *testing.T) {
@@ -162,5 +153,16 @@ func TestClient_GetRecentOrderHistory(t *testing.T) {
 	for _, o := range oo {
 		_ = o
 		fmt.Printf("order detais: %+v", o)
+	}
+}
+
+func TestClient_Orderbook(t *testing.T) {
+	c := NewClient(TestAPIKey, getTestKeyContent())
+	orderbook, err := c.GetOrderbook("XSNBTC", 5)
+	fmt.Printf("orderbook: %v\n", orderbook)
+	fmt.Printf("err: %v\n", err)
+
+	for _, o := range orderbook.Entries{
+		fmt.Printf("side: %s price: %.8f \n", o.Side, o.Price)
 	}
 }
